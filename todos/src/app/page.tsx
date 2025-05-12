@@ -8,12 +8,7 @@ export default function Home() {
   return (
     <div>
       <pre>{JSON.stringify(state.value, null, 2)}</pre>
-      <div>
-        <button onClick={() => send({ type: 'Load Todos', todos: ['Take bins out', 'Buy groceries'] })}>Load Todos</button>
-      </div>
-      <div>
-        <button onClick={() => send({ type: 'Fail Loading Todos', errorMessage: 'Oh no!' })}>Fail Loading Todos</button>
-      </div>
+      <pre>{JSON.stringify(state.context, null, 2)}</pre>
     </div>
   );
 }

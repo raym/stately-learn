@@ -1,11 +1,11 @@
-import { createMachine, fromPromise } from "xstate";
+import { assign, createMachine, fromPromise } from "xstate";
 
 export const todosMachine = createMachine({
-  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxBuRWQG6oDWlZljxEylGnQZN0qWAh6p8uAC7FUpANoAGALradiUAAdZxVesMgAHogC0AFgCMAdgoA2ZwE43ADmcBWABoQAE9EAGZwimcY8PtwgIBfROChHAISTgl6UkYhNjAAJ0LUQoojABsVADNSgFsKNJFM8VocvJk5BSVzTV19SxNYMzVSSxsEWz8KHzdwgCYfR3mg0LtPKNnnRz9-ZJSQUnQ4SyaMsUHTXvG7ezd-aPn5+7cV4LDJ+a17GY8dpIOZ1EWTaUnyl2G1yQ1luLkez38r1WH1sjjh4T+u2SqRk6WBgk6mGykAhIws0ImtnmjiiK3Cni0SPeiDRURc-z2gNxzTE1FBuWkLEwAFFiqUSdChmSxhS7K8KP4fJ4fPEAsyENSKE8EUj9okgA */
+  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxBuRWQG6oDWlZljxEylGnQZN0qWAh6p8uAC7FUpANoAGALradiUAAdZxVesMgAHogC0AFgBMjigA4t9gGyuA7AFYAGhAAT0QARgBmCgBORzDfPwBfRKChHAISTgl6UkYhNjAAJ0LUQoojABsVADNSgFsKNJFM8VocvJk5BSVzTV19SxNYMzVSSxsEW3jXCh8I+wj-INDJ13sKPx8tCLDHJOSg0nQ4SyaMsUHTXvG7ey23D28lkLsw6JmtLZ29g5Az0SybSk+Uuw2uSGstzCPgocQSy1eYS0Gy+u32qRk6QBgk6mGykFBIwsEImtjiLmeKzCbxiT3Rf0xzTE1CBuWkLEwAFFiqUCRChkSxiS7HE-BQkWE-J49giEH5orCwvY1ot9skgA */
   id: "Todo Machine",
   initial: "Loading Todos",
   types: {
-    events: {} as { type: 'Load Todos'; todos: string[] } | { type: 'Fail Loading Todos'; errorMessage: string },
+    // events: {} as { type: 'Load Todos'; todos: string[] } | { type: 'Fail Loading Todos'; errorMessage: string },
     // typegen: {} as import ('./todoAppMachine.typegen').Typegen0
     actors: null! as {
       loadTodos: {
@@ -15,6 +15,10 @@ export const todosMachine = createMachine({
       }
     }
   },
+  context: {
+    todos: [] as string[],
+    errorMessage: undefined as string | undefined,
+  },
   states: {
     "Loading Todos": {
       invoke: {
@@ -22,10 +26,12 @@ export const todosMachine = createMachine({
 
         onDone: {
           target: 'Todos Loaded',
+          actions: 'assignTodosToContext',
         },
 
         onError: {
           target: "Loading Todos Errored",
+          actions: 'assignErrorMessageToContext',
         }
       }
     },
@@ -33,10 +39,19 @@ export const todosMachine = createMachine({
     "Loading Todos Errored": {}
   }
 }, {
+  actions: {
+    assignTodosToContext: assign(({context, event}) => {
+      return { todos: event.output }
+    }),
+    assignErrorMessageToContext: assign(({ context, event }) => {
+      return { errorMessage: event.error.message }
+    })
+  },
   actors: {
     loadTodos: fromPromise(async () => {
-      await new Promise(r => setTimeout(r, 1000))
-      return ['Take bins out', 'Buy groceries']
+      throw new Error('Oh no!')
+      // await new Promise(r => setTimeout(r, 1000))
+      // return ['Take bins out', 'Buy groceries']
     })
   }
 })
