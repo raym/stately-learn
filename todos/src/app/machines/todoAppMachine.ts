@@ -1,32 +1,42 @@
-import { createMachine } from "xstate";
+import { createMachine, fromPromise } from "xstate";
 
 export const todosMachine = createMachine({
-  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxDXU+qrANoAMAXUSgADj2IAXYqlIiQAD0QBaAMwBOACwV+AVgAcu9aoDsugDQgAnioCM-CgCYTqzad0BfD5eZY8RMkoOelJGXzYAMVxiABtMYIYuFgFhJBBxWCkZOTSlBGVHXVUnTQA2fmMzSxt821tSijqTW30zL28QUnQ4eV8cAhJyeQys2Xk85TLdChNHR1LdUsLqlUd+Yv1S5tbPDr7-QaDaELDueDSR6THclU1bExm5haWLazt7ilUtlra97n6AuQKOF4sdIMMJFccqAJqo9CVHD9XjVWhR1Iidl4fP8DoFqMdEiCAKIAJxJqBJ4IukOy4zsjlUK3yqmK6lKmPaQA */
+  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxBuRWQG6oDWlZljxEylGnQZN0qWAh6p8uAC7FUpANoAGALradiUAAdZxVesMgAHogC0AFgCMAdgoA2ZwE43ADmcBWABoQAE9EAGZwimcY8PtwgIBfROChHAISTgl6UkYhNjAAJ0LUQoojABsVADNSgFsKNJFM8VocvJk5BSVzTV19SxNYMzVSSxsEWz8KHzdwgCYfR3mg0LtPKNnnRz9-ZJSQUnQ4SyaMsUHTXvG7ezd-aPn5+7cV4LDJ+a17GY8dpIOZ1EWTaUnyl2G1yQ1luLkez38r1WH1sjjh4T+u2SqRk6WBgk6mGykAhIws0ImtnmjiiK3Cni0SPeiDRURc-z2gNxzTE1FBuWkLEwAFFiqUSdChmSxhS7K8KP4fJ4fPEAsyENSKE8EUj9okgA */
   id: "Todo Machine",
   initial: "Loading Todos",
   types: {
     events: {} as { type: 'Load Todos'; todos: string[] } | { type: 'Fail Loading Todos'; errorMessage: string },
     // typegen: {} as import ('./todoAppMachine.typegen').Typegen0
+    actors: null! as {
+      loadTodos: {
+        input: void,
+        output: string[],
+        error: unknown,
+      }
+    }
   },
   states: {
     "Loading Todos": {
-      on: {
-        "Load Todos": {
-          target: "Todos Loaded",
-          actions: 'consoleLogTodos',
+      invoke: {
+        src: 'loadTodos',
+
+        onDone: {
+          target: 'Todos Loaded',
         },
-        "Fail Loading Todos": {
+
+        onError: {
           target: "Loading Todos Errored",
         }
-      },
+      }
     },
     "Todos Loaded": {},
     "Loading Todos Errored": {}
   }
 }, {
-  actions: {
-    consoleLogTodos: ({event}) => {
-      console.log(event?.todos)
-    }
+  actors: {
+    loadTodos: fromPromise(async () => {
+      await new Promise(r => setTimeout(r, 1000))
+      return ['Take bins out', 'Buy groceries']
+    })
   }
 })
