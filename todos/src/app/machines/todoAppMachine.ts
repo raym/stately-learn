@@ -1,14 +1,10 @@
-import { assign, createMachine, fromPromise } from "xstate";
+import { assign, fromPromise, setup } from "xstate";
+import { hasPathWithValueOfType } from "../lib/hasPathWithValueOfType";
 
 const todos = new Set<string>()//['Take bins out', 'Buy groceries'])
 
-export const todosMachine = createMachine({
-  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxBuRWQG6oDWlZljxEylGnQZN0qWAh6p8uAC7FUpANoAGALradiUAAdZxVesMgAHogC0AJgAsARgoBWZ-YDMbr84BsAOwAHMH2YQA0IACedvbOXu4AnMGO9klJzs7Bbm4AvnlRQjgEJJwS9KSMQmxgAE51qHUURgA2KgBmTQC2FMUiZeK0ldUycgpK5pq6+pYmsGZqpJY2CLaOGe5abvEpGc5uaYFRsQhegRSBXmHBnvmFIP2lYn1jmBWQrADCdWAqYJhyAB3WZIEDzRYWMGrAKOZJJQIbNz+AJaLT2ewnOwXFL+NLnDGOfzeFIFIoyEqiTg1d7DT4AETArTAygByhkoOMpimK0Q9jRFAS9n8-g8XiCgVFbixay8WkSzi0zkcKvsVzSRLJjwpAxePz+qiqgLAQMw7IwFAAyoRUECpF06t1MGQjABXZSsABiPWdpDdykwRFwVUgnPB3KWvLWmQoGy0oS8KuyytyMuFFzV-i0jnOOySwucgS1TyplH1KikwLNMitNrtRodTpd7tYltdACNumYwxCedC+cSKBLJek-FctP4044MwlDnKJ8Lgkl-MWdc9OOXDYwq+bUFbcNwpLv2OpKAoBK8MJTBhRN5WTdWLZaD0eZPJSLxJkt9D2I1DQKs06uF4PjjocOSeGmMaBDsbi3MuIryl4q5XrqG6-BWRo7jWz6Hkax71I0zRtJ0PSXsI65lhhW7Gqau77nhjC7u+n4VuoP66HMf7LP2CCOLk7ijuk+ZJI4WgpMcMSIDm-juHB-ggcEKJypkKEUaWFCMsyNHHhwZ4fvwghrhpWksq+GAsYobHTHonFgr2ka8ecWgUNsARhCBgSBAEyIyg4aRDhiCR4l4KShSKanXi8pk6TIrCEU0LTtMojbkVFnAxeZqCWV+7EzHZXILH2AGIDBbgUGEarZqkQRiZiUlrO5Q4LhOSrOEkSqOJFaGUDFbIUglvwQKwViwMo-wULgHSsnUAAU9huGiACUrAljefWPlgg2hgV4ZFY5JUIFmSSXIqtzBJKbmpg16yuO1wQ+DkeIinBTjdZRmlMiy-VXttw30sQsBdrAsCYINv77f+1iIG4CKxsimT8uK6bBDK5wVcuKqBPyTjY6J70aRUUg1CenDnkZqEfUTRo1Dl1k-s4Bj2dxUYOPyFXiqk8aBJk+bXacthZIk2NKaKRLxMESoFA8pDoHAlhrWIXGQzxh22IcFyLTs937HOfmhS5WbKn4Qrygi9zkpThPDMTYzK5CqvQ2sGyuCEaRBKJSrY+KfkHPYFCPR1y5yu1oX2ATN40h8ED28VTvZHC4mSiBGL+BdWTSjdBzBO4iYTr4uRZiiEcvNTowsJgACiDRNJAscHU76xhAH6LiY4S6ZHrDWFuVgTiQp5sYkq+Yl+hBr3nRMj11DqyC6FsYdQmSa3Pxk7dwclxYw9y4SfGXUPIrY+YduD70datr2j6zbKNPjurCErnCYcLguK1XhpvKFBONO+bCn4aLBFHlRceWFT44RfPhKezMVZRkXK5DIClxRBB2N5NGOYA78XjMubIMFhRAM+tpLKt8oxuERC3CcCk4L8XCH5dIsk04JHbjmJIuRRLIQPsZdaX1WSbTBjXIaxDeKS1knvbyhYEQqUcGjL+KJRIZB5kuSUOZ7gFCAA */
-  id: "Todo Machine",
-  initial: "Loading Todos",
+export const todosMachine = setup({
   types: {
-    // events: {} as { type: 'Load Todos'; todos: string[] } | { type: 'Fail Loading Todos'; errorMessage: string },
-    // typegen: {} as import ('./todoAppMachine.typegen').Typegen0
     actors: null! as {
       loadTodos: {
         input: void,
@@ -42,6 +38,60 @@ export const todosMachine = createMachine({
       type: 'Dismiss error',
     }
   },
+  actions: {
+    assignTodosToContext: assign(({context, event}) => {
+      if ('output' in event) {
+        return { todos: event.output }
+      }
+      return {}
+    }),
+    assignErrorMessageToContext: assign(({ context, event }) => {
+      // if (typeof event === 'object' && 'error' in event && event.error && typeof event.error === 'object' && 'message' in event.error && typeof event.error.message === 'string') {
+      if (hasPathWithValueOfType<{error: {message: string}}>(['error', 'message'], 'string')(event)) {
+        return { errorMessage: event.error.message }
+      }
+      return {}
+    }),
+    assignFormInputToContext: assign(({ context, event }) => {
+      if ('value' in event) {
+        return { createNewTodoFormInput: event.value }
+      }
+      return {}
+    })
+  },
+  actors: {
+    loadTodos: fromPromise(async () => {
+      // throw new Error('Oh no, could not load todos!')
+      await new Promise(r => setTimeout(r, 400))
+      return Array.from(todos)
+    }),
+    saveTodo: fromPromise(async (context) => {
+      // throw new Error('Oh no, could not save todo!')
+      // set todos -- it will be reloaded in the next state
+      if (hasPathWithValueOfType<{input: {createNewTodoFormInput: string}}>(['input', 'createNewTodoFormInput'], 'string')(context)) {
+        todos.add(context.input.createNewTodoFormInput)
+      }
+    }),
+    deleteTodo: fromPromise(async (context) => {
+      // throw new Error('Oh no, could not delete todo!')
+      if (hasPathWithValueOfType<{input: {todo: string}}>(['input', 'todo'], 'string')(context)) {
+        return todos.delete(context.input.todo)
+      }
+      return
+    })
+  },
+  guards: {
+    hasTodos: ({event}) => {
+      if (hasPathWithValueOfType<{output: string[]}>(['output'], 'object')(event)) {
+        return event.output.length > 0
+      }
+      return false
+    }
+  },
+}).createMachine({
+  /** @xstate-layout N4IgpgJg5mDOIC5QBUD2FUAICyBDAxgBYCWAdmAHQAyquEZUmaGsAxBuRWQG6oDWlZljxEylGnQZN0qWAh6p8uAC7FUpANoAGALradiUAAdZxVesMgAHogC0AJgAsARgoBWZ-YDMbr84BsAOwAHMH2YQA0IACedvbOXu4AnMGO9klJzs7Bbm4AvnlRQjgEJJwS9KSMQmxgAE51qHUURgA2KgBmTQC2FMUiZeK0ldUycgpK5pq6+pYmsGZqpJY2CLaOGe5abvEpGc5uaYFRsQhegRSBXmHBnvmFIP2lYn1jmBWQrADCdWAqYJhyAB3WZIEDzRYWMGrAKOZJJQIbNz+AJaLT2ewnOwXFL+NLnDGOfzeFIFIoyEqiTg1d7DT4AETArTAygByhkoOMpimK0Q9jRFAS9n8-g8XiCgVFbixay8WkSzi0zkcKvsVzSRLJjwpAxePz+qiqgLAQMw7IwFAAyoRUECpF06t1MGQjABXZSsABiPWdpDdykwRFwVUgnPB3KWvLWmQoGy0oS8KuyytyMuFFzV-i0jnOOySwucgS1TyplH1KikwLNMitNrtRodTpd7tYltdACNumYwxCedC+cSKBLJek-FctP4044MwlDnKJ8Lgkl-MWdc9OOXDYwq+bUFbcNwpLv2OpKAoBK8MJTBhRN5WTdWLZaD0eZPJSLxJkt9D2I1DQKs06uF4PjjocOSeGmMaBDsbi3MuIryl4q5XrqG6-BWRo7jWz6Hkax71I0zRtJ0PSXsI65lhhW7Gqau77nhjC7u+n4VuoP66HMf7LP2CCOLk7ijuk+ZJI4WgpMcMSIDm-juHB-ggcEKJypkKEUaWFCMsyNHHhwZ4fvwghrhpWksq+GAsYobHTHonFgr2ka8ecWgUNsARhCBgSBAEyIyg4aRDhiCR4l4KShSKanXi8pk6TIrCEU0LTtMojbkVFnAxeZqCWV+7EzHZXILH2AGIDBbgUGEarZqkQRiZiUlrO5Q4LhOSrOEkSqOJFaGUDFbIUglvwQKwViwMo-wULgHSsnUAAU9huGiACUrAljefWPlgg2hgV4ZFY5JUIFmSSXIqtzBJKbmpg16yuO1wQ+DkeIinBTjdZRmlMiy-VXttw30sQsBdrAsCYINv77f+1iIG4CKxsimT8uK6bBDK5wVcuKqBPyTjY6J70aRUUg1CenDnkZqEfUTRo1Dl1k-s4Bj2dxUYOPyFXiqk8aBJk+bXacthZIk2NKaKRLxMESoFA8pDoHAlhrWIXGQzxh22IcFyLTs937HOfmhS5WbKn4Qrygi9zkpThPDMTYzK5CqvQ2sGyuCEaRBKJSrY+KfkHPYFCPR1y5yu1oX2ATN40h8ED28VTvZHC4mSiBGL+BdWTSjdBzBO4iYTr4uRZiiEcvNTowsJgACiDRNJAscHU76xhAH6LiY4S6ZHrDWFuVgTiQp5sYkq+Yl+hBr3nRMj11DqyC6FsYdQmSa3Pxk7dwclxYw9y4SfGXUPIrY+YduD70datr2j6zbKNPjurCErnCYcLguK1XhpvKFBONO+bCn4aLBFHlRceWFT44RfPhKezMVZRkXK5DIClxRBB2N5NGOYA78XjMubIMFhRAM+tpLKt8oxuERC3CcCk4L8XCH5dIsk04JHbjmJIuRRLIQPsZdaX1WSbTBjXIaxDeKS1knvbyhYEQqUcGjL+KJRIZB5kuSUOZ7gFCAA */
+  id: "Todo Machine",
+  initial: "Loading Todos",
   context: {
     todos: [] as string[],
     errorMessage: undefined as string | undefined,
@@ -55,7 +105,9 @@ export const todosMachine = createMachine({
         onDone: [{
           target: 'Todos Loaded',
           actions: 'assignTodosToContext',
-          guard: "hasTodos"
+          guard: {
+            type: 'hasTodos',
+          },
         }, {
           target: "Creating new todo",
           reenter: true
@@ -139,35 +191,4 @@ export const todosMachine = createMachine({
       }
     }
   }
-}, {
-  actions: {
-    assignTodosToContext: assign(({context, event}) => {
-      return { todos: event.output }
-    }),
-    assignErrorMessageToContext: assign(({ context, event }) => {
-      return { errorMessage: event.error.message }
-    }),
-    assignFormInputToContext: assign(({ context, event }) => {
-      return { createNewTodoFormInput: event.value }
-    })
-  },
-  actors: {
-    loadTodos: fromPromise(async () => {
-      // throw new Error('Oh no, could not load todos!')
-      await new Promise(r => setTimeout(r, 400))
-      return Array.from(todos)
-    }),
-    saveTodo: fromPromise(async (context) => {
-      // throw new Error('Oh no, could not save todo!')
-      // set todos -- it will be reloaded in the next state
-      return todos.add(context.input.createNewTodoFormInput)
-    }),
-    deleteTodo: fromPromise(async (context) => {
-      // throw new Error('Oh no, could not delete todo!')
-      return todos.delete(context.input.todo)
-    })
-  },
-  guards: {
-    hasTodos: ({event}) => event.output.length > 0
-  },
 })
